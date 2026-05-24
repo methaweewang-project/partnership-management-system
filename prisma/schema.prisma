@@ -1,0 +1,195 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Partner {
+  id            String    @id @default(cuid())
+  name          String    @unique
+  type          PartnerType
+  email         String?
+  phone         String?
+  website       String?
+  description   String?   @db.Text
+  status        PartnerStatus @default(ACTIVE)
+  rating        Int?      @db.SmallInt
+  yearsActive   Int?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  
+  contacts      Contact[]
+  pipelines     Pipeline[]
+  outreach      Outreach[]
+  performance   Performance[]
+  contracts     Contract[]
+  
+  @@index([type])
+  @@index([status])
+}
+
+model Contact {
+  id            String    @id @default(cuid())
+  partnerId     String
+  partner       Partner   @relation(fields: [partnerId], references: [id], onDelete: Cascade)
+  
+  firstName     String
+  lastName      String
+  title         String?
+  email         String
+  phone         String?
+  social        String?
+  notes         String?   @db.Text
+  
+  lastOutreach  DateTime?
+  nextFollowUp  DateTime?
+  
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  
+  outreach      Outreach[]
+  
+  @@unique([partnerId, email])
+  @@index([partnerId])
+}
+
+model Pipeline {
+  id            String    @id @default(cuid())
+  partnerId     String
+  partner       Partner   @relation(fields: [partnerId], references: [id], onDelete: Cascade)
+  
+  dealName      String
+  dealValue     Float
+  currency      String    @default("USD")
+  stage         PipelineStage @default(PROSPECTING)
+  
+  winProbability Int?     @db.SmallInt
+  expectedCloseDate DateTime?
+  
+  description   String?   @db.Text
+  notes         String?   @db.Text
+  
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  
+  @@index([partnerId])
+  @@index([stage])
+}
+
+model Outreach {
+  id            String    @id @default(cuid())
+  partnerId     String
+  partner       Partner   @relation(fields: [partnerId], references: [id], onDelete: Cascade)
+  contactId     String?
+  contact       Contact?  @relation(fields: [contactId], references: [id], onDelete: SetNull)
+  
+  outreachType  OutreachType
+  subject       String?
+  message       String?   @db.Text
+  status        OutreachStatus @default(PENDING)
+  
+  sentAt        DateTime?
+  responseAt    DateTime?
+  responseNotes String?   @db.Text
+  
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  
+  @@index([partnerId])
+  @@index([contactId])
+  @@index([status])
+}
+
+model Performance {
+  id            String    @id @default(cuid())
+  partnerId     String    @unique
+  partner       Partner   @relation(fields: [partnerId], references: [id], onDelete: Cascade)
+  
+  totalReach    Int?
+  engagement    Float?
+  clicks        Int?
+  conversions   Int?
+  roi            Float?
+  
+  monthlyData   Json?
+  
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  
+  @@index([partnerId])
+}
+
+model Contract {
+  id            String    @id @default(cuid())
+  partnerId     String
+  partner       Partner   @relation(fields: [partnerId], references: [id], onDelete: Cascade)
+  
+  contractName  String
+  documentUrl   String?   @db.Text
+  
+  startDate     DateTime
+  endDate       DateTime
+  renewalDate   DateTime?
+  
+  terms         String?   @db.Text
+  deliverables  String?   @db.Text
+  paymentTerms  String?
+  
+  status        ContractStatus @default(ACTIVE)
+  
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  
+  @@index([partnerId])
+  @@index([status])
+}
+
+enum PartnerType {
+  MEDIA
+  KOL
+  COMMUNITY
+}
+
+enum PartnerStatus {
+  ACTIVE
+  INACTIVE
+  PROSPECT
+  DORMANT
+}
+
+enum PipelineStage {
+  PROSPECTING
+  INITIAL_CONTACT
+  NEGOTIATING
+  PROPOSAL_SENT
+  NEGOTIATING_TERMS
+  CLOSED_WON
+  CLOSED_LOST
+}
+
+enum OutreachType {
+  EMAIL
+  CALL
+  MEETING
+  SOCIAL_MEDIA
+  PROPOSAL
+}
+
+enum OutreachStatus {
+  PENDING
+  SENT
+  DELIVERED
+  RESPONDED
+  CONVERTED
+}
+
+enum ContractStatus {
+  DRAFT
+  ACTIVE
+  COMPLETED
+  EXPIRED
+  CANCELLED
+}
